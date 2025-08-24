@@ -6,24 +6,27 @@ const RetirementPlanner = () => {
   const [inputs, setInputs] = useState({
     currentAge: 50,
     retirementAge: 62,
-    currentSavings: 10000,
-    monthlyContribution: 500,
-    expectedReturn: 7,
+    currentSavings: 1000000,
+    monthlyContribution: 3000,
+    expectedReturn: 6,
     inflationRate: 3,
-    retirementExpenses: 4000,
-    socialSecurity: 1500,
+    retirementExpenses: 10000,
+    socialSecurity: 4000,
     safeWithdrawalRate: 4
   });
 
   const [errors, setErrors] = useState({});
   const [aiInsights, setAiInsights] = useState('');
   const [isLoadingAI, setIsLoadingAI] = useState(false);
-  const [ollamaConnected, setOllamaConnected] = useState(false);
+  const [AIConnected, setAIConnected] = useState(false);
+  const API_KEY = '';
+  const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+  const API_MODEL = 'llama-3.1-8b-instant';
   
   // Financial data from your images
   const [financialData, setFinancialData] = useState({
-    netWorth: 1000,
-    netWorthGrowth: 1000, // 6 month growth
+    netWorth: 1000000,
+    netWorthGrowth: 6000, // 6 month growth
     spending2024: 89000.30,
     spending2023: 12990.88,
     hasRealData: true
@@ -71,81 +74,80 @@ const RetirementPlanner = () => {
     validateInputs(newInputs);
   };
 
-  // Check Ollama connection
-  const checkOllamaConnection = async () => {
-    try {
-      const response = await fetch('http://localhost:11434/api/tags');
-      if (response.ok) {
-        setOllamaConnected(true);
-        return true;
-      }
-    } catch (error) {
-      setOllamaConnected(false);
-      return false;
-    }
-    return false;
+  // Check AI connection
+  const checkAIConnection = async () => {
+    setAIConnected(true);
+    return true; // Simulate connection check
+   
   };
 
-  // Get AI insights using Ollama
+  // Get AI insights using AI
   const getAIInsights = async () => {
     setIsLoadingAI(true);
-    
+    console.log('Godan 1')
     try {
       // Check connection first
-      const connected = await checkOllamaConnection();
+      const connected = await checkAIConnection();
       if (!connected) {
-        setAiInsights('❌ Ollama not connected. Please ensure Ollama is running locally on port 11434.\n\nTo start Ollama:\n1. Download from https://ollama.ai\n2. Run: ollama serve\n3. Pull a model: ollama pull llama2');
+        setAiInsights('❌ AI not connected. Please ensure AI is running.\n\nTo start AI:\n1. Download from https://AI.ai\n2. Run: AI serve\n3. Pull a model: AI pull llama2');
         setIsLoadingAI(false);
         return;
       }
+      console.log('Godan 2')
 
-      const prompt = `You are a financial advisor AI analyzing retirement planning data. Based on the following information, provide personalized insights and recommendations:
+        const prompt = `You are a financial advisor AI analyzing retirement planning data. Based on the following information, provide personalized insights and recommendations:
 
-CURRENT FINANCIAL SITUATION:
-- Net Worth: $${financialData.netWorth.toLocaleString()}
-- Net Worth Growth (6 months): +$${financialData.netWorthGrowth.toLocaleString()}
-- 2024 Spending: $${financialData.spending2024.toLocaleString()}
-- 2023 Spending: $${financialData.spending2023.toLocaleString()}
+        CURRENT FINANCIAL SITUATION:
+        - Net Worth: $${financialData.netWorth.toLocaleString()}
+        - Net Worth Growth (6 months): +$${financialData.netWorthGrowth.toLocaleString()}
+        - 2024 Spending: $${financialData.spending2024.toLocaleString()}
+        - 2023 Spending: $${financialData.spending2023.toLocaleString()}
 
-RETIREMENT PLANNING INPUTS:
-- Current Age: ${inputs.currentAge}
-- Retirement Age: ${inputs.retirementAge}
-- Current Savings: $${inputs.currentSavings.toLocaleString()}
-- Monthly Contribution: $${inputs.monthlyContribution}
-- Expected Return: ${inputs.expectedReturn}%
-- Expected Monthly Retirement Expenses: $${inputs.retirementExpenses}
+        RETIREMENT PLANNING INPUTS:
+        - Current Age: ${inputs.currentAge}
+        - Retirement Age: ${inputs.retirementAge}
+        - Current Savings: $${inputs.currentSavings.toLocaleString()}
+        - Monthly Contribution: $${inputs.monthlyContribution}
+        - Expected Return: ${inputs.expectedReturn}%
+        - Expected Monthly Retirement Expenses: $${inputs.retirementExpenses}
 
-Please provide:
-1. Analysis of current financial trajectory
-2. Specific recommendations for retirement planning
-3. Assessment of spending patterns and their impact
-4. Actionable steps to optimize retirement readiness
-5. Risk factors and opportunities
+        Please provide:
+        1. Analysis of current financial trajectory
+        2. Specific recommendations for retirement planning
+        3. Assessment of spending patterns and their impact
+        4. Actionable steps to optimize retirement readiness
+        5. Risk factors and opportunities
 
-Keep response concise but insightful (max 500 words).`;
+        Keep response concise but insightful (max 500 words).`;
 
-      const response = await fetch('http://localhost:11434/api/generate', {
+      const requestBody = {
+        messages: [{
+          role: 'user',
+          content: prompt,
+        }],
+        // Using a popular and fast Groq-hosted model.
+        model: API_MODEL,
+      };
+      console.log('requestBody:', requestBody);
+      const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: 'llama2', // You can change this to your preferred model
-          prompt: prompt,
-          stream: false
-        })
+        body: JSON.stringify(requestBody),
       });
-
+      console.log('requestBody:', requestBody);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      setAiInsights(data.response || 'No insights generated.');
+      setAiInsights(data.choices[0].message.content || 'No insights generated.');
       
     } catch (error) {
       console.error('AI Analysis Error:', error);
-      setAiInsights(`❌ Error connecting to Ollama: ${error.message}\n\nPlease ensure:\n1. Ollama is installed and running\n2. A model is available (try: ollama pull llama2)\n3. Ollama is accessible on localhost:11434`);
+      setAiInsights(`❌ Error connecting to AI: ${error.message}\n\nPlease ensure:\n1. AI is installed and running\n2. A model is available (try: AI pull llama2)\n3. AI is accessible on localhost:11434`);
     } finally {
       setIsLoadingAI(false);
     }
@@ -458,7 +460,7 @@ Keep response concise but insightful (max 500 words).`;
       <div style={styles.cardTitle}>
         <Brain size={24} color="#8b5cf6" />
         AI Financial Advisor
-        {ollamaConnected && (
+        {AIConnected && (
           <span style={styles.connectedIndicator}>● Connected</span>
         )}
       </div>
@@ -681,7 +683,7 @@ Keep response concise but insightful (max 500 words).`;
             </button>
 
             <div style={styles.aiInsights}>
-              {aiInsights || 'Click "Get AI Insights" for personalized financial analysis using your actual data.\n\nThe AI will analyze:\n• Your net worth trajectory\n• Spending patterns and trends\n• Retirement readiness\n• Specific recommendations\n• Risk assessment\n\nRequires Ollama running locally.'}
+              {aiInsights || 'Click "Get AI Insights" for personalized financial analysis using your actual data.\n\nThe AI will analyze:\n• Your net worth trajectory\n• Spending patterns and trends\n• Retirement readiness\n• Specific recommendations\n• Risk assessment\n\nRequires AI running locally.'}
             </div>
           </div>
         </div>
